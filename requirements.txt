@@ -1,6 +1,6 @@
 streamlit
 streamlit-folium
-react
+React
 pandas
 numpy
 folium
