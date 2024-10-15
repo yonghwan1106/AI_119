@@ -1,78 +1,50 @@
 import streamlit as st
+import pandas as pd
+import numpy as np
+import pydeck as pdk
 
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Map, HeatmapLayer } from 'react-leaflet-heatmap-layer';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+st.title('지역별 119 신고 밀집도 히트맵')
 
-// 이 부분은 실제 환경에서 leaflet의 기본 마커 아이콘 문제를 해결하기 위한 코드입니다.
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/images/marker-shadow.png',
-});
+# 가상의 데이터 생성 (실제로는 데이터베이스나 API에서 가져와야 함)
+def generate_data():
+    center_lat, center_lng = 37.5665, 126.9780  # 서울 중심 좌표
+    num_points = 1000
+    
+    data = pd.DataFrame({
+        'lat': np.random.normal(center_lat, 0.05, num_points),
+        'lon': np.random.normal(center_lng, 0.05, num_points),
+        'intensity': np.random.random(num_points)
+    })
+    
+    return data
 
-const EmergencyCallHeatmap = () => {
-  const [heatmapData, setHeatmapData] = useState([]);
-  const [timeRange, setTimeRange] = useState('24h'); // '24h', '7d', '30d'
+# 시간 범위 선택
+time_range = st.selectbox('시간 범위 선택', ['최근 24시간', '최근 7일', '최근 30일'])
 
-  useEffect(() => {
-    // 실제 구현에서는 API를 통해 데이터를 가져옵니다.
-    const fetchHeatmapData = () => {
-      // 서울시 중심 좌표 주변으로 랜덤한 위치에 포인트 생성
-      const centerLat = 37.5665;
-      const centerLng = 126.9780;
-      const points = Array.from({ length: 1000 }, () => [
-        centerLat + (Math.random() - 0.5) * 0.2,
-        centerLng + (Math.random() - 0.5) * 0.2,
-        Math.random() // 강도 (0-1 사이의 값)
-      ]);
-      setHeatmapData(points);
-    };
+# 데이터 생성
+data = generate_data()
 
-    fetchHeatmapData();
-  }, [timeRange]);
+# 히트맵 생성
+layer = pdk.Layer(
+    "HeatmapLayer",
+    data,
+    opacity=0.9,
+    get_position=["lon", "lat"],
+    get_weight="intensity",
+)
 
-  return (
-    <Card className="w-full h-[600px]">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>지역별 119 신고 밀집도 히트맵</span>
-          <div>
-            <select 
-              value={timeRange} 
-              onChange={(e) => setTimeRange(e.target.value)}
-              className="p-2 border rounded"
-            >
-              <option value="24h">최근 24시간</option>
-              <option value="7d">최근 7일</option>
-              <option value="30d">최근 30일</option>
-            </select>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0 h-[calc(100%-4rem)]">
-        <MapContainer center={[37.5665, 126.9780]} zoom={11} style={{ height: '100%', width: '100%' }}>
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-          <HeatmapLayer
-            points={heatmapData}
-            longitudeExtractor={m => m[1]}
-            latitudeExtractor={m => m[0]}
-            intensityExtractor={m => m[2]}
-            radius={20}
-            max={1.0}
-            minOpacity={0.1}
-          />
-        </MapContainer>
-      </CardContent>
-    </Card>
-  );
-};
+view_state = pdk.ViewState(
+    latitude=37.5665,
+    longitude=126.9780,
+    zoom=10,
+    pitch=0,
+)
 
-export default EmergencyCallHeatmap;
+# 지도 렌더링
+st.pydeck_chart(pdk.Deck(
+    layers=[layer],
+    initial_view_state=view_state,
+    map_style="mapbox://styles/mapbox/light-v9",
+))
+
+st.write(f"선택된 시간 범위: {time_range}")
