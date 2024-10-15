@@ -1,8 +1,7 @@
 streamlit
 streamlit-folium
-React
 pandas
 numpy
 folium
 leaflet
-
+pydeck
