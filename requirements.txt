@@ -1,2 +1,7 @@
 streamlit
+streamlit-folium
+pandas
+numpy
+folium
+leaflet
 
